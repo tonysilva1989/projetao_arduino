@@ -33,6 +33,7 @@
 */
 
 #include <ESP8266WiFi.h>
+#include <ESP8266HTTPClient.h>
 #include <Ticker.h>
 //Definições de valores fixos e variáveis globais do código
 
@@ -153,7 +154,8 @@ boolean connectToServer(){
       Serial.println("connection failed");
       continue;
     }
-    
+
+    Serial.println("connected!");
     isConnected = true;
   }
   
@@ -177,31 +179,65 @@ boolean sendRequest(){
   blinker.attach(0.2, blinkSND);
 
 //curl -H "Content-Type: application/json" -X POST /P '{"nome_medicamento":"xyz","qtd_medicamento":"1","pagamento":"xyz","status":"xyz"}' https://easymed-projetao.herokuapp.com/pedidos
-//{"nome_medicamento"=>"xyz", "qtd_medicamento"=>"1", "pagamento"=>"xyz", "status"=>"xyz", "pedido"=>{"nome_medicamento"=>"xyz", "qtd_medicamento"=>"1", "pagamento"=>"xyz", "status"=>"xyz"}}
   
   while(!x){
     // We now create a URI for the request
     String url = "/pedidos";
     
-    String json = "{\"nome_medicamento\": \"xyz\",\"qtd_medicamento\": \"1\",\"pagamento\": \"xyz\",\"status\": \"xyz\"}";
+    String json = "{\"nome\":\"xyz\",\"qtd_medicamento\":\"1\",\"pagamento\":\"xyz\",\"status\":\"xyz\"} ";
     Serial.print("Requesting URL: ");
     Serial.println(url);
+
     
-    // This will send the request to the server
+   /*  This will send the request to the server
     client.print("POST "); 
     client.print(url);
     client.println(" HTTP/1.1");
     client.print("Host: ");
     client.println(host);
-    client.println("User-Agent: ESP2688");
-    client.println("Accept: application/json");
+    client.println("User-Agent: curl/7.49.0");
+    client.println("Accept: oi");
     client.print("Content-Lenght: ");
     client.println(json.length());
     client.println("Content-Type: application/json");
     client.println("Connection: close");
     client.println();
-    client.println(json);
+    client.println(json);*/
+
+
+  // returns negative value if unsuccessful
+  // returns 0 if successful (needs to be set up that way on the receiving webpage)
+  String returnvalue = "-1";
     
+    HTTPClient http;
+    http.begin(host,80,"/pedidos");
+    http.addHeader("Content-Type", "application/json");
+    int httpCode = http.POST(json);
+    if (httpCode != 200) {
+      Serial.println("not successful");
+      } else {
+      returnvalue = http.getString();
+      Serial.println("successful: 1");   
+      }
+    http.end();
+
+ 
+
+
+        // This will send the request to the server
+    Serial.print("POST "); 
+    Serial.print(url);
+    Serial.println(" HTTP/1.1");
+    Serial.print("Host: ");
+    Serial.println(host);
+    Serial.println("User-Agent: curl/7.49.0");
+    Serial.println("Accept: */*");
+    Serial.print("Content-Lenght: ");
+    Serial.println(json.length());
+    Serial.println("Content-Type: application/json");
+    Serial.println("Connection: close");
+    Serial.println();
+    Serial.println(json);
     unsigned long timeout = millis();
     while (client.available() == 0) {
       if (millis() - timeout > 5000) {
@@ -261,7 +297,7 @@ int nextState(int currentState, int lastPress){
   switch (currentState){
     case SLEEP:
     if (lastPress == EV_LONGPRESS){
-    next = APP;
+    next = CONNECT;
     }else if (lastPress == EV_SHORTPRESS){
     next = CONNECT;
     }else{
@@ -343,7 +379,7 @@ boolean getWiFiConfig(){
   
   digitalWrite(ledCFG, HIGH);
   
-  while (gotWiFiInfo == false){
+  /*while (gotWiFiInfo == false){
     
     WiFiClient client = server.available();
     
@@ -375,7 +411,9 @@ boolean getWiFiConfig(){
     delay(1);
     Serial.println("Client disconnected");
   
-  }
+  }*/
+  nwID = "CIn-GUESTS2";
+  nwPW = "acessocin";
   
   digitalWrite(ledCFG, LOW);
   
@@ -474,12 +512,15 @@ void loop(){
         case APP:
         Serial.println("Abrindo aplicativo...");
         //ledBlink(D6, 10);
+        sendRequest();
         Serial.println("App aberto no celular!");
         break;
         case CONNECT:
         Serial.println("Conectando...");
-        connectToServer();
+        //connectToServer();
         Serial.println("Conectado a rede!");
+        Serial.println("Enviando pedido PELO CONNECT...");
+        sendRequest();
         break;
         case SEND:
         Serial.println("Enviando pedido...");
